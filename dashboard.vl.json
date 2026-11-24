@@ -17,7 +17,6 @@
       "name": "pickPartner",
       "description": "Defined at the top level so one selection works in the Partners bars and all three map panels. Clicks only count on marks that carry a partner.",
       "views": ["partners", "mapAmericas", "mapEurope", "mapAsia"],
-      "value": [{"partner": "United States"}],
       "select": {"type": "point", "fields": ["partner"], "clear": "dblclick",
                  "on": "click[event.item && event.item.datum && isValid(event.item.datum.partner)]"}
     }
