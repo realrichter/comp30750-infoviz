@@ -5,6 +5,8 @@
 An interactive Vega-Lite dashboard of Ireland's monthly merchandise trade (CSO table TSM10,
 Jan 2015 – Sep 2026), built for COMP30750 Information Visualisation.
 
+**Live dashboard: https://realrichter.github.io/comp30750-infoviz/**
+
 ## Run locally
 The spec loads its data by URL, so serve the folder rather than opening the file directly:
 ```
