@@ -1,0 +1,377 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "Ireland's monthly goods trade, Jan 2015 - Sep 2026 (CSO table TSM10). Four linked views: summary numbers, monthly area chart (drag to pick a period), partner x month heatmap, partner ranking and goods breakdown (click to pick the highlighted slice).",
+  "title": {
+    "text": "How much of Ireland's export boom was one product going to one country?",
+    "subtitle": [
+      "Drag on the monthly chart to pick a period. Click a partner or goods class to highlight it.",
+      "Source: CSO TSM10, goods only, not seasonally adjusted"
+    ],
+    "fontSize": 18,
+    "subtitleFontSize": 12,
+    "offset": 16
+  },
+  "params": [
+    {
+      "name": "flow",
+      "value": "Exports",
+      "bind": {"input": "radio", "options": ["Exports", "Imports", "Balance"], "name": "Show: "}
+    },
+    {
+      "name": "pickPartner",
+      "description": "Defined at the top level so one selection works in two views: the Partners bars and the tile map. Clicks only count on marks that carry a partner.",
+      "views": ["partners", "partnerTiles"],
+      "value": [{"partner": "United States"}],
+      "select": {"type": "point", "fields": ["partner"], "clear": "dblclick",
+                 "on": "click[event.item && event.item.datum && isValid(event.item.datum.partner)]"}
+    }
+  ],
+  "config": {
+    "view": {"stroke": null},
+    "axis": {"labelColor": "#555", "titleColor": "#555", "gridColor": "#ececec", "domainColor": "#bbb", "tickColor": "#bbb", "labelFontSize": 11},
+    "title": {"anchor": "start", "fontSize": 14, "subtitleColor": "#666", "subtitleFontSize": 11},
+    "legend": {"labelColor": "#555", "titleColor": "#555"}
+  },
+  "resolve": {"scale": {"color": "independent"}, "legend": {"color": "independent"}},
+  "spacing": 36,
+  "vconcat": [
+    {
+      "description": "Summary numbers for the selected period. joinaggregate keeps the period totals on every row before the partner/goods filters, so the slice's share can be calculated.",
+      "width": 760,
+      "height": 44,
+      "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+      "transform": [
+        {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+        {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+        {"filter": {"param": "period"}},
+        {
+          "joinaggregate": [
+            {"op": "sum", "field": "exports", "as": "allExports"},
+            {"op": "sum", "field": "imports", "as": "allImports"},
+            {"op": "sum", "field": "value", "as": "allValue"},
+            {"op": "min", "field": "date", "as": "first"},
+            {"op": "max", "field": "date", "as": "last"}
+          ]
+        },
+        {"filter": {"param": "pickPartner"}},
+        {"filter": {"param": "pickGoods"}},
+        {
+          "aggregate": [
+            {"op": "sum", "field": "value", "as": "sliceValue"},
+            {"op": "max", "field": "allExports", "as": "allExports"},
+            {"op": "max", "field": "allImports", "as": "allImports"},
+            {"op": "max", "field": "allValue", "as": "allValue"},
+            {"op": "min", "field": "first", "as": "first"},
+            {"op": "max", "field": "last", "as": "last"}
+          ]
+        },
+        {"calculate": "timeFormat(datum.first, '%b %Y') + ' – ' + timeFormat(datum.last, '%b %Y')", "as": "Period"},
+        {"calculate": "'€' + format(datum.allExports / 1000, ',.1f') + 'bn'", "as": "Exports"},
+        {"calculate": "'€' + format(datum.allImports / 1000, ',.1f') + 'bn'", "as": "Imports"},
+        {"calculate": "'€' + format((datum.allExports - datum.allImports) / 1000, ',.1f') + 'bn'", "as": "Balance"},
+        {"calculate": "format(datum.sliceValue / datum.allValue, '.0%')", "as": "Highlighted slice share"},
+        {"fold": ["Period", "Exports", "Imports", "Balance", "Highlighted slice share"], "as": ["label", "text"]},
+        {"calculate": "datum.label == 'Highlighted slice share' ? 'Highlighted, % of ' + lower(flow) : datum.label", "as": "caption"}
+      ],
+      "encoding": {
+        "x": {"field": "label", "type": "nominal", "axis": null,
+              "sort": ["Period", "Exports", "Imports", "Balance", "Highlighted slice share"]}
+      },
+      "layer": [
+        {"mark": {"type": "text", "fontWeight": "bold", "color": "#222", "y": 12},
+         "encoding": {"text": {"field": "text"},
+                      "size": {"condition": {"test": "datum.label == 'Period'", "value": 15}, "value": 20}}},
+        {"mark": {"type": "text", "fontSize": 11, "color": "#666", "y": 36},
+         "encoding": {"text": {"field": "caption"}}}
+      ]
+    },
+    {
+      "description": "Monthly time series. Grey area = all trade for the chosen flow, coloured area = the highlighted slice. The interval selection 'period' filters the summary, ranking and goods views.",
+      "width": 760,
+      "height": 220,
+      "title": {"text": "Monthly trade", "subtitle": "Grey: all trade. Colour: highlighted"},
+      "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+      "layer": [
+        {
+          "description": "All trade",
+          "transform": [
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "total"}], "groupby": ["year", "month"]},
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"}
+          ],
+          "params": [{"name": "period", "select": {"type": "interval", "encodings": ["x"]}}],
+          "mark": {"type": "area", "interpolate": "step-after", "color": "#dcdcd8"},
+          "encoding": {
+            "x": {"field": "date", "type": "temporal", "title": null, "axis": {"format": "%Y", "tickCount": "year", "grid": false}},
+            "y": {"field": "total", "type": "quantitative", "title": "€ million per month",
+                  "axis": {"minExtent": 120, "maxExtent": 120, "tickCount": 5}}
+          }
+        },
+        {
+          "description": "Highlighted slice = rows matching the picked partners and goods",
+          "transform": [
+            {"filter": {"param": "pickPartner"}},
+            {"filter": {"param": "pickGoods"}},
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "total"}], "groupby": ["year", "month"]},
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"}
+          ],
+          "mark": {"type": "area", "interpolate": "step-after",
+                   "color": {"expr": "flow == 'Exports' ? '#2b6cb0' : flow == 'Imports' ? '#c95f22' : '#555555'"}},
+          "encoding": {
+            "x": {"field": "date", "type": "temporal"},
+            "y": {"field": "total", "type": "quantitative"}
+          }
+        },
+        {
+          "description": "Hover rule with tooltip (nearest month). joinaggregate keeps each month's total before the slice filters, so the tooltip can show slice and share.",
+          "transform": [
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"joinaggregate": [{"op": "sum", "field": "value", "as": "monthTotal"}], "groupby": ["year", "month"]},
+            {"filter": {"param": "pickPartner"}},
+            {"filter": {"param": "pickGoods"}},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "slice"},
+                           {"op": "max", "field": "monthTotal", "as": "monthTotal"}],
+             "groupby": ["year", "month"]},
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+            {"calculate": "datum.slice / datum.monthTotal", "as": "share"}
+          ],
+          "params": [{"name": "hover", "select": {"type": "point", "fields": ["date"], "nearest": true, "on": "pointerover", "clear": "pointerout"}}],
+          "mark": {"type": "rule", "color": "#333"},
+          "encoding": {
+            "x": {"field": "date", "type": "temporal"},
+            "opacity": {"condition": {"param": "hover", "empty": false, "value": 0.5}, "value": 0},
+            "tooltip": [
+              {"field": "date", "type": "temporal", "timeUnit": "yearmonth", "title": "Month"},
+              {"field": "monthTotal", "type": "quantitative", "format": ",.0f", "title": "All trade (€m)"},
+              {"field": "slice", "type": "quantitative", "format": ",.0f", "title": "Highlighted slice (€m)"},
+              {"field": "share", "type": "quantitative", "format": ".0%", "title": "Slice share"}
+            ]
+          }
+        },
+        {
+          "description": "Annotations (facts from the data, no claims about causes)",
+          "data": {
+            "values": [
+              {"year": 2021, "month": 1, "note": "Brexit", "align": "left", "row": 26},
+              {"year": 2025, "month": 3, "note": "Record, €37.5bn", "align": "right", "row": 8},
+              {"year": 2025, "month": 9, "note": "€28.5bn", "align": "left", "row": 8}
+            ]
+          },
+          "transform": [{"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"}],
+          "layer": [
+            {"mark": {"type": "rule", "color": "#888", "strokeWidth": 0.75},
+             "encoding": {"x": {"field": "date", "type": "temporal"}, "y": {"value": 14}, "y2": {"value": 220}}},
+            {"transform": [{"filter": "datum.align == 'left'"}],
+             "mark": {"type": "text", "align": "left", "dx": 4, "fontSize": 10, "color": "#555"},
+             "encoding": {"x": {"field": "date", "type": "temporal"}, "y": {"field": "row", "type": "quantitative", "scale": null}, "text": {"field": "note"}}},
+            {"transform": [{"filter": "datum.align == 'right'"}],
+             "mark": {"type": "text", "align": "right", "dx": -4, "fontSize": 10, "color": "#555"},
+             "encoding": {"x": {"field": "date", "type": "temporal"}, "y": {"field": "row", "type": "quantitative", "scale": null}, "text": {"field": "note"}}}
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Heatmap (when) and tile map (where) side by side. They share one colour scale and legend.",
+      "spacing": 40,
+      "resolve": {"scale": {"color": "shared"}, "legend": {"color": "shared"}},
+      "hconcat": [
+        {
+          "description": "Heatmap: top 15 partners x month, same time axis as the chart above. Colour follows the Show switch: sequential white-to-blue for exports, white-to-orange for imports (values are never negative), diverging orange-white-blue only for the balance, which really has a sign. Square-root scale so mid-sized partners stay visible next to the US outlier.",
+          "width": 760,
+          "height": 225,
+          "title": "By partner",
+          "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+          "transform": [
+            {"lookup": "partner", "from": {"data": {"url": "data/partner_rank.csv"}, "key": "partner", "fields": ["rank"]}},
+            {"calculate": "toNumber(datum.rank)", "as": "rank"},
+            {"filter": "isValid(datum.rank) && datum.rank <= 15"},
+            {"filter": {"param": "pickGoods"}},
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "value"},
+                           {"op": "sum", "field": "exports", "as": "exports"},
+                           {"op": "sum", "field": "imports", "as": "imports"}],
+             "groupby": ["partner", "rank", "year", "month"]},
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+            {"calculate": "datetime(datum.year, datum.month, 1)", "as": "nextMonth"}
+          ],
+          "mark": "rect",
+          "encoding": {
+            "x": {"field": "date", "type": "temporal", "title": null, "axis": {"format": "%Y", "tickCount": "year", "grid": false}},
+            "x2": {"field": "nextMonth"},
+            "y": {"field": "partner", "type": "nominal", "title": null,
+                  "sort": {"field": "rank", "op": "min", "order": "ascending"},
+                  "axis": {"minExtent": 120, "maxExtent": 120, "ticks": false, "domain": false}},
+            "color": {
+              "field": "value", "type": "quantitative",
+              "scale": {"type": "sqrt", "clamp": true, "interpolate": "lab",
+                        "domain": {"expr": "flow == 'Balance' ? [-20000, 20000] : [0, 20000]"},
+                        "scheme": {"expr": "flow == 'Exports' ? ['#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85'] : flow == 'Imports' ? ['#f2f0eb', '#fcd8a9', '#f2a952', '#ce7416', '#994a07'] : ['#994a07', '#ce7416', '#f2a952', '#fcd8a9', '#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85']"}},
+              "legend": {"title": "€ million per month",
+                         "orient": "bottom", "direction": "horizontal", "gradientLength": 360, "titleLimit": 500,
+                         "values": {"expr": "flow == 'Balance' ? [-20000, -5000, -1000, 0, 1000, 5000, 20000] : [0, 1000, 5000, 20000]"}}
+            },
+            "opacity": {"condition": {"param": "period", "value": 1}, "value": 0.3},
+            "tooltip": [
+              {"field": "partner", "title": "Partner"},
+              {"field": "date", "type": "temporal", "timeUnit": "yearmonth", "title": "Month"},
+              {"field": "exports", "type": "quantitative", "format": ",.0f", "title": "Exports (€m)"},
+              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports (€m)"}
+            ]
+          }
+        },
+        {
+          "description": "Tile-grid map: one equal-sized square per named partner, placed roughly by geography (small European countries stay readable). Colour = average € million per month in the selected period, for the picked goods, on the heatmap's scale. Click a tile = pickPartner.",
+          "width": 264,
+          "height": 88,
+          "title": "Where",
+          "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+          "transform": [
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+            {"filter": {"param": "period"}},
+            {"joinaggregate": [{"op": "distinct", "field": "date", "as": "months"}]},
+            {"filter": {"param": "pickGoods"}},
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "value"},
+                           {"op": "sum", "field": "exports", "as": "exports"},
+                           {"op": "sum", "field": "imports", "as": "imports"},
+                           {"op": "max", "field": "months", "as": "months"}],
+             "groupby": ["partner"]},
+            {"lookup": "partner",
+             "from": {"data": {"url": "data/partner_tiles.csv", "format": {"type": "csv", "parse": {"col": "number", "row": "number"}}},
+                      "key": "partner", "fields": ["code", "col", "row"]}},
+            {"filter": "isValid(datum.code)"},
+            {"calculate": "toNumber(datum.col)", "as": "col"},
+            {"calculate": "toNumber(datum.row)", "as": "row"},
+            {"calculate": "datum.value / datum.months", "as": "value"},
+            {"calculate": "datum.exports / datum.months", "as": "exports"},
+            {"calculate": "datum.imports / datum.months", "as": "imports"}
+          ],
+          "encoding": {
+            "x": {"field": "col", "type": "ordinal", "axis": null, "scale": {"domain": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "paddingInner": 0.1}},
+            "y": {"field": "row", "type": "ordinal", "axis": null, "scale": {"domain": [0, 1, 2, 3], "paddingInner": 0.1}},
+            "tooltip": [
+              {"field": "partner", "title": "Partner"},
+              {"field": "exports", "type": "quantitative", "format": ",.0f", "title": "Exports, € million per month"},
+              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports, € million per month"}
+            ]
+          },
+          "layer": [
+            {
+              "name": "partnerTiles",
+              "mark": {"type": "rect", "cornerRadius": 2, "cursor": "pointer"},
+              "encoding": {
+                "color": {"field": "value", "type": "quantitative",
+                          "scale": {"type": "sqrt", "clamp": true, "interpolate": "lab",
+                                    "domain": {"expr": "flow == 'Balance' ? [-20000, 20000] : [0, 20000]"},
+                                    "scheme": {"expr": "flow == 'Exports' ? ['#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85'] : flow == 'Imports' ? ['#f2f0eb', '#fcd8a9', '#f2a952', '#ce7416', '#994a07'] : ['#994a07', '#ce7416', '#f2a952', '#fcd8a9', '#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85']"}}},
+                "stroke": {"condition": {"param": "pickPartner", "empty": false, "value": "#222"}, "value": null},
+                "strokeWidth": {"value": 2}
+              }
+            },
+            {
+              "mark": {"type": "text", "fontSize": 9, "fontWeight": "bold"},
+              "encoding": {
+                "text": {"field": "code"},
+                "color": {"condition": {"test": "abs(datum.value) > 6000", "value": "white"}, "value": "#333"}
+              }
+            },
+            {
+              "description": "Ireland, for orientation (no value)",
+              "data": {"values": [{"code": "IE", "col": 2, "row": 1}]},
+              "transform": [],
+              "encoding": {"tooltip": null},
+              "layer": [
+                {"mark": {"type": "rect", "cornerRadius": 2, "fill": "white", "stroke": "#333", "strokeDash": [2, 2]}},
+                {"mark": {"type": "text", "fontSize": 9, "color": "#333"}, "encoding": {"text": {"field": "code"}}}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spacing": 60,
+      "resolve": {"scale": {"color": "independent"}},
+      "hconcat": [
+        {
+          "name": "partners",
+          "description": "Ranked bars: top 15 partners for the selected period, goods and flow. Click = pickPartner (defined at the top level).",
+          "width": 320,
+          "height": 300,
+          "title": "Partners",
+          "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+          "transform": [
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+            {"filter": {"param": "period"}},
+            {"filter": {"param": "pickGoods"}},
+            {"filter": "datum.partner != 'Rest of world'"},
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "value"},
+                           {"op": "sum", "field": "exports", "as": "exports"},
+                           {"op": "sum", "field": "imports", "as": "imports"}],
+             "groupby": ["partner"]},
+            {"calculate": "abs(datum.value)", "as": "size"},
+            {"window": [{"op": "row_number", "as": "position"}], "sort": [{"field": "size", "order": "descending"}]},
+            {"filter": "datum.position <= 15"},
+            {"calculate": "flow == 'Imports' || datum.value < 0 ? 'orange' : 'blue'", "as": "colour"}
+          ],
+          "mark": {"type": "bar", "cornerRadiusEnd": 3, "height": 14, "cursor": "pointer"},
+          "encoding": {
+            "y": {"field": "partner", "type": "nominal", "title": null, "sort": {"field": "size", "order": "descending"}},
+            "x": {"field": "value", "type": "quantitative", "title": "€ million", "axis": {"orient": "top", "tickCount": 4}},
+            "color": {"field": "colour", "type": "nominal", "legend": null,
+                      "scale": {"domain": ["blue", "orange"], "range": ["#2b6cb0", "#c95f22"]}},
+            "opacity": {"condition": {"param": "pickPartner", "value": 1}, "value": 0.35},
+            "tooltip": [
+              {"field": "partner", "title": "Partner"},
+              {"field": "exports", "type": "quantitative", "format": ",.0f", "title": "Exports (€m)"},
+              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports (€m)"},
+              {"field": "value", "type": "quantitative", "format": ",.0f", "title": "Shown (€m)"}
+            ]
+          }
+        },
+        {
+          "description": "Diverging bars (tornado): exports right, imports left, for the selected period and partners. Click = pickGoods.",
+          "width": 300,
+          "height": 300,
+          "title": "Goods",
+          "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
+          "transform": [
+            {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
+            {"filter": {"param": "period"}},
+            {"filter": {"param": "pickPartner"}},
+            {"aggregate": [{"op": "sum", "field": "exports", "as": "exports"},
+                           {"op": "sum", "field": "imports", "as": "imports"}],
+             "groupby": ["goods"]},
+            {"calculate": "datum.exports + datum.imports", "as": "total"},
+            {"calculate": "datum.exports", "as": "Exports"},
+            {"calculate": "-datum.imports", "as": "Imports"},
+            {"fold": ["Exports", "Imports"], "as": ["Flow", "amount"]}
+          ],
+          "params": [
+            {"name": "pickGoods", "value": [{"goods": "Medicines & pharma (54)"}],
+             "select": {"type": "point", "fields": ["goods"], "on": "click", "clear": "dblclick"}}
+          ],
+          "mark": {"type": "bar", "cornerRadiusEnd": 3, "height": 14, "cursor": "pointer"},
+          "encoding": {
+            "y": {"field": "goods", "type": "nominal", "title": null, "sort": {"field": "total", "op": "max", "order": "descending"},
+                  "axis": {"labelLimit": 220}},
+            "x": {"field": "amount", "type": "quantitative", "title": "€ million",
+                  "axis": {"orient": "top", "tickCount": 4, "labelExpr": "replace(datum.label, '−', '')"}},
+            "color": {"field": "Flow", "type": "nominal",
+                      "scale": {"domain": ["Exports", "Imports"], "range": ["#2b6cb0", "#c95f22"]},
+                      "legend": {"orient": "bottom", "title": null}},
+            "opacity": {"condition": {"param": "pickGoods", "value": 1}, "value": 0.35},
+            "tooltip": [
+              {"field": "goods", "title": "Goods"},
+              {"field": "exports", "type": "quantitative", "format": ",.0f", "title": "Exports (€m)"},
+              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports (€m)"}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
