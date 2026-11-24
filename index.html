@@ -8,21 +8,19 @@
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.21.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0"></script>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 24px; background: #fff; color: #222; }
-    #vis { overflow-x: auto; }
-    .vega-bindings { margin: 0 0 12px; font-size: 14px; }
-    .vega-bind-name { font-weight: bold; }
+    body { font-family: sans-serif; margin: 24px; }
+    #controls { margin: 0 0 12px 5px; font-size: 13px; }
   </style>
 </head>
 <body>
+  <div id="controls"></div>
   <div id="vis"></div>
   <script>
-    // The spec loads data/monthly_trade.csv, so open this page through a local web server
-    // (e.g. `python -m http.server` in this folder) rather than by double-clicking the file.
-    vegaEmbed("#vis", "dashboard.vl.json", {actions: {source: true, editor: true, export: true, compiled: false}})
+    // The spec loads data/monthly_trade.csv, so open this page through a web server, not as a local file.
+    vegaEmbed("#vis", "dashboard.vl.json")
       .catch(err => {
         document.getElementById("vis").innerHTML =
-          "<p>Could not load the dashboard (" + err + "). Open it via a local web server: run <code>python -m http.server</code> in this folder and go to http://localhost:8000.</p>";
+          "<p>Could not load the dashboard (" + err + "). Open it via a web server: run <code>python -m http.server</code> in this folder and go to http://localhost:8000.</p>";
       });
   </script>
 </body>

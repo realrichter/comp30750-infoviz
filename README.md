@@ -22,7 +22,8 @@ DESIGN.md              design document
 process.py             data processing: CSO TSM10 JSON-stat -> data/monthly_trade.csv
 data/monthly_trade.csv processed data: year, month, partner, goods, exports, imports (EUR million)
 data/partner_rank.csv  top 20 partners by 2015-26 total trade (orders the heatmap rows)
-data/partner_tiles.csv tile-map positions (code, column, row) for the 20 partners
+data/partner_iso.csv   ISO country codes for the 20 partners (joins the trade data to the map)
+data/world-50m.json    country shapes (Natural Earth 1:50m, from world-atlas)
 data/raw/tsm10.json    raw CSO download used to build the processed data
 ```
 
