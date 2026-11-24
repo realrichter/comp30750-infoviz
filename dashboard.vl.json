@@ -217,7 +217,7 @@
               "scale": {"type": "sqrt", "clamp": true, "interpolate": "lab",
                         "domain": {"expr": "flow == 'Exports' ? [0, 25000] : flow == 'Imports' ? [0, 3000] : [-25000, 25000]"},
                         "scheme": {"expr": "flow == 'Exports' ? ['#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85'] : flow == 'Imports' ? ['#f2f0eb', '#fcd8a9', '#f2a952', '#ce7416', '#994a07'] : ['#994a07', '#ce7416', '#f2a952', '#fcd8a9', '#f2f0eb', '#c5deec', '#7db6d6', '#3b83b9', '#134b85']"}},
-              "legend": {"title": ["€ million", "per month"], "orient": "right", "direction": "vertical", "gradientLength": 225,
+              "legend": {"title": "€ million per month", "orient": "bottom", "direction": "horizontal", "gradientLength": 360, "titleLimit": 500,
                          "values": {"expr": "flow == 'Exports' ? [0, 1000, 5000, 10000, 25000] : flow == 'Imports' ? [0, 500, 1000, 2000, 3000] : [-25000, -5000, 0, 5000, 25000]"},
                          "labelExpr": "(datum.value == (flow == 'Imports' ? 3000 : 25000) ? '≥ ' : datum.value == -25000 ? '≤ ' : '') + datum.label"}
             },
@@ -231,7 +231,7 @@
           }
         },
         {
-          "description": "Regional small multiples of the 20 named partners (Americas, Europe, Asia), each cropped to its partners on a flat Mercator projection so every partner is large enough to read and click. Colour = average € million per month in the selected period, for the picked goods, with its own colour range sized for averages (legend right of the panels). White = not a top-20 partner (pooled as Rest of world). Click a country = pickPartner.",
+          "description": "Regional small multiples of the 20 named partners (Americas, Europe, Asia), each cropped to its partners on a flat Mercator projection so every partner is large enough to read and click. Colour = average € million per month in the selected period, for the picked goods, with its own colour range sized for averages (legend under the panels). White = not a top-20 partner (pooled as Rest of world). Click a country = pickPartner.",
           "title": {"text": "Where the trade went", "subtitle": "Average month in the selected period. White: no data.", "dx": -120},
           "spacing": 20,
           "resolve": {"scale": {"color": "shared"}, "legend": {"color": "shared"}},
@@ -270,7 +270,7 @@
                  "encoding": {
                    "shape": {"field": "geo", "type": "geojson"},
                    "color": {"field": "value", "type": "quantitative",
-                             "legend": {"title": ["€ million,", "average month"], "orient": "right", "direction": "vertical", "gradientLength": 200,
+                             "legend": {"title": "€ million, average month", "orient": "bottom", "direction": "horizontal", "gradientLength": 360, "titleLimit": 500,
                                         "values": {"expr": "flow == 'Exports' ? [0, 1000, 5000, 10000] : flow == 'Imports' ? [0, 500, 1000, 2500] : [-5000, -1000, 0, 1000, 5000]"},
                                         "labelExpr": "(datum.value == (flow == 'Exports' ? 10000 : flow == 'Imports' ? 2500 : 5000) ? '≥ ' : datum.value == -5000 ? '≤ ' : '') + datum.label"},
                              "scale": {"type": "sqrt", "clamp": true, "interpolate": "lab",
