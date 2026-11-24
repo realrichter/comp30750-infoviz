@@ -2,7 +2,7 @@
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "description": "Ireland's monthly goods trade, Jan 2015 - Sep 2026 (CSO table TSM10). Four linked views: summary numbers, monthly area chart (drag to pick a period), partner x month heatmap, partner ranking and goods breakdown (click to pick the highlighted slice).",
   "title": {
-    "text": "How much of Ireland's export boom was one product going to one country?",
+    "text": "Ireland's goods trade by partner and product, 2015–2026",
     "subtitle": "Drag on the monthly chart to pick a period. Click a partner or goods class to highlight it. Source: CSO TSM10, goods only, not seasonally adjusted.",
     "fontSize": 16,
     "offset": 20
