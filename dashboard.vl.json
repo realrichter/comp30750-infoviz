@@ -400,7 +400,7 @@
         },
         {
           "title": "Goods",
-          "description": "Diverging bars (tornado): exports right, imports left, for the selected period and partners. Click = pickGoods.",
+          "description": "Ranked bars: goods classes for the selected period, partners and flow, same encoding as the partner ranking (blue = exports or surplus, orange = imports or deficit). Click = pickGoods.",
           "width": 260,
           "height": 300,
           "data": {"url": "data/monthly_trade.csv", "format": {"type": "csv", "parse": {"year": "number", "month": "number", "exports": "number", "imports": "number"}}},
@@ -408,13 +408,13 @@
             {"calculate": "datetime(datum.year, datum.month - 1, 1)", "as": "date"},
             {"filter": {"param": "period"}},
             {"filter": {"param": "pickPartner"}},
-            {"aggregate": [{"op": "sum", "field": "exports", "as": "exports"},
+            {"calculate": "flow == 'Exports' ? datum.exports : flow == 'Imports' ? datum.imports : datum.exports - datum.imports", "as": "value"},
+            {"aggregate": [{"op": "sum", "field": "value", "as": "value"},
+                           {"op": "sum", "field": "exports", "as": "exports"},
                            {"op": "sum", "field": "imports", "as": "imports"}],
              "groupby": ["goods"]},
-            {"calculate": "datum.exports + datum.imports", "as": "total"},
-            {"calculate": "datum.exports", "as": "Exports"},
-            {"calculate": "-datum.imports", "as": "Imports"},
-            {"fold": ["Exports", "Imports"], "as": ["Flow", "amount"]}
+            {"calculate": "abs(datum.value)", "as": "size"},
+            {"calculate": "flow == 'Imports' || datum.value < 0 ? 'orange' : 'blue'", "as": "colour"}
           ],
           "params": [
             {"name": "pickGoods",
@@ -422,18 +422,17 @@
           ],
           "mark": {"type": "bar", "cornerRadiusEnd": 3, "height": 14, "cursor": "pointer"},
           "encoding": {
-            "y": {"field": "goods", "type": "nominal", "title": null, "sort": {"field": "total", "op": "max", "order": "descending"},
+            "y": {"field": "goods", "type": "nominal", "title": null, "sort": {"field": "size", "order": "descending"},
                   "axis": {"labelLimit": 195, "minExtent": 200, "maxExtent": 200}},
-            "x": {"field": "amount", "type": "quantitative", "title": "€ million",
-                  "axis": {"tickCount": 4, "labelExpr": "replace(datum.label, '−', '')"}},
-            "color": {"field": "Flow", "type": "nominal",
-                      "scale": {"domain": ["Exports", "Imports"], "range": ["#2b6cb0", "#c95f22"]},
-                      "legend": {"orient": "bottom", "title": null}},
+            "x": {"field": "value", "type": "quantitative", "title": "€ million", "axis": {"tickCount": 4}},
+            "color": {"field": "colour", "type": "nominal", "legend": null,
+                      "scale": {"domain": ["blue", "orange"], "range": ["#2b6cb0", "#c95f22"]}},
             "opacity": {"condition": {"param": "pickGoods", "value": 1}, "value": 0.35},
             "tooltip": [
               {"field": "goods", "title": "Goods"},
               {"field": "exports", "type": "quantitative", "format": ",.0f", "title": "Exports (€m)"},
-              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports (€m)"}
+              {"field": "imports", "type": "quantitative", "format": ",.0f", "title": "Imports (€m)"},
+              {"field": "value", "type": "quantitative", "format": ",.0f", "title": "Shown (€m)"}
             ]
           }
         }
