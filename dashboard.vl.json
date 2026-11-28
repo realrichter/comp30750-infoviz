@@ -416,7 +416,7 @@
             {"fold": ["Exports", "Imports"], "as": ["Flow", "amount"]}
           ],
           "params": [
-            {"name": "pickGoods", "value": [{"goods": "Medicines & pharma (54)"}],
+            {"name": "pickGoods",
              "select": {"type": "point", "fields": ["goods"], "on": "click", "clear": "dblclick"}}
           ],
           "mark": {"type": "bar", "cornerRadiusEnd": 3, "height": 14, "cursor": "pointer"},
